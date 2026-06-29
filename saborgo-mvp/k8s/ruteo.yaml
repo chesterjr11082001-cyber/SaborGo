@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruteo
+  namespace: saborgo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ruteo
+  template:
+    metadata:
+      labels:
+        app: ruteo
+    spec:
+      containers:
+      - name: ruteo
+        image: saborgo-ruteo:v1
+        imagePullPolicy: Never
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://saborgo_user:saborgo_password@db:5432/saborgo_db"
+        ports:
+        - containerPort: 3005
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruteo-service
+  namespace: saborgo
+spec:
+  selector:
+    app: ruteo
+  ports:
+  - port: 3005
+    targetPort: 3005

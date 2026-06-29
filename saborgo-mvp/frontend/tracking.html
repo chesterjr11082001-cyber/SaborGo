@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SaborGo — Tracking</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            background: var(--bg);
+            padding-bottom: 40px;
+        }
+
+        .ck-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: var(--glass);
+            backdrop-filter: blur(24px) saturate(200%);
+            -webkit-backdrop-filter: blur(24px) saturate(200%);
+            border-bottom: 1px solid var(--sep);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+        }
+
+        .ck-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+        }
+
+        /* Progress bar */
+        .progress-wrap {
+            background: var(--card);
+            margin: 14px 16px;
+            border-radius: var(--r-lg);
+            padding: 20px;
+            box-shadow: var(--s-sm);
+        }
+
+        .progress-title {
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: var(--text-3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 16px;
+        }
+
+        .steps {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .steps::before {
+            content: '';
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            height: 2px;
+            background: var(--border);
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            height: 2px;
+            background: var(--accent);
+            z-index: 1;
+            transition: width 0.6s ease;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            z-index: 2;
+        }
+
+        .step-dot {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            transition: all 0.4s ease;
+        }
+
+        .step-dot.done {
+            background: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .step-dot.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.2);
+            animation: pulse-dot 1.5s infinite;
+        }
+
+        @keyframes pulse-dot {
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.2)
+            }
+
+            50% {
+                box-shadow: 0 0 0 8px rgba(255, 71, 87, 0.1)
+            }
+        }
+
+        .step-label {
+            font-size: 0.65rem;
+            font-weight: 600;
+            color: var(--text-3);
+            text-align: center;
+            max-width: 60px;
+        }
+
+        .step-label.active {
+            color: var(--accent);
+        }
+
+        /* Repartidor card */
+        .rep-card {
+            background: var(--card);
+            margin: 0 16px 14px;
+            border-radius: var(--r-lg);
+            padding: 16px;
+            box-shadow: var(--s-sm);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .rep-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), #FF6B35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            flex-shrink: 0;
+        }
+
+        .rep-info {
+            flex: 1;
+        }
+
+        .rep-name {
+            font-size: 1rem;
+            font-weight: 800;
+        }
+
+        .rep-sub {
+            font-size: 0.78rem;
+            color: var(--text-3);
+            margin-top: 2px;
+        }
+
+        .eta-badge {
+            background: var(--accent-light);
+            color: var(--accent);
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 0.8rem;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+        /* Mapa */
+        .map-wrap {
+            margin: 0 16px 14px;
+            border-radius: var(--r-lg);
+            overflow: hidden;
+            box-shadow: var(--s-sm);
+            height: 320px;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Estado entregado */
+        .delivered-banner {
+            background: linear-gradient(135deg, #30D158, #34C759);
+            margin: 0 16px 14px;
+            border-radius: var(--r-lg);
+            padding: 20px;
+            text-align: center;
+            display: none;
+            box-shadow: 0 4px 20px rgba(52, 199, 89, 0.35);
+        }
+
+        .delivered-banner h3 {
+            font-size: 1.3rem;
+            font-weight: 900;
+            color: white;
+            margin-bottom: 4px;
+        }
+
+        .delivered-banner p {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        /* Sin datos */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-3);
+        }
+
+        .empty-state-icon {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+        }
+
+        .empty-state h3 {
+            font-size: 1.1rem;
+            font-weight: 800;
+            margin-bottom: 6px;
+            color: var(--text);
+        }
+
+        .empty-state p {
+            font-size: 0.85rem;
+        }
+
+        /* Spinner */
+        .loading {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .loading p {
+            margin-top: 12px;
+            font-size: 0.85rem;
+            color: var(--text-3);
+            font-weight: 500;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="ck-header">
+        <button class="btn-icon" onclick="history.back()">←</button>
+        <span class="ck-title">Seguimiento de Orden <span id="orden-titulo" style="color:var(--accent)"></span></span>
+    </div>
+
+    <div id="loading-state" class="loading">
+        <div class="spinner-border text-danger" role="status"
+            style="width:2rem;height:2rem;border:3px solid var(--accent-light);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;display:inline-block">
+        </div>
+        <p>Buscando tu repartidor...</p>
+    </div>
+
+    <div id="sin-asignar" class="empty-state" style="display:none">
+        <div class="empty-state-icon">⏳</div>
+        <h3>Procesando tu pedido</h3>
+        <p>Estamos aprobando tu pago y asignando un repartidor.<br>Esto tarda menos de 30 segundos.</p>
+    </div>
+
+    <div id="contenido-tracking" style="display:none">
+
+        <!-- Progress Steps -->
+        <div class="progress-wrap">
+            <div class="progress-title">Estado del pedido</div>
+            <div class="steps">
+                <div class="progress-line" id="progress-line"></div>
+                <div class="step">
+                    <div class="step-dot done" id="step-0">✓</div>
+                    <div class="step-label">Recibido</div>
+                </div>
+                <div class="step">
+                    <div class="step-dot" id="step-1">💳</div>
+                    <div class="step-label" id="lbl-1">Aprobado</div>
+                </div>
+                <div class="step">
+                    <div class="step-dot" id="step-2">🛵</div>
+                    <div class="step-label" id="lbl-2">En camino</div>
+                </div>
+                <div class="step">
+                    <div class="step-dot" id="step-3">🏠</div>
+                    <div class="step-label" id="lbl-3">Entregado</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Repartidor -->
+        <div class="rep-card">
+            <div class="rep-avatar">🛵</div>
+            <div class="rep-info">
+                <div class="rep-name" id="rep-nombre">—</div>
+                <div class="rep-sub" id="rep-tel">—</div>
+            </div>
+            <div class="eta-badge" id="eta-badge">— min</div>
+        </div>
+
+        <!-- Mapa -->
+        <div class="map-wrap">
+            <div id="map"></div>
+        </div>
+
+        <!-- Banner entregado -->
+        <div class="delivered-banner" id="delivered-banner">
+            <h3>🎉 ¡Pedido entregado!</h3>
+            <p>Tu orden llegó. ¡Buen provecho!</p>
+        </div>
+
+    </div>
+
+    <script>
+        const ordenId = new URLSearchParams(window.location.search).get('orden');
+        if (!ordenId) window.location.href = '/';
+
+        document.getElementById('orden-titulo').innerText = '#' + ordenId;
+
+        let map = null;
+        let markerRep = null;
+        let markerDest = null;
+        let polylineRuta = null;
+        let ws = null;
+
+        // ── Inicializar mapa ──────────────────────────────────────────────────────
+        function initMap(latRep, lngRep, latDest, lngDest) {
+            if (map) return;
+
+            map = L.map('map', { zoomControl: true, attributionControl: false });
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18
+            }).addTo(map);
+
+            // Ícono repartidor
+            const iconoRep = L.divIcon({
+                html: '<div style="background:var(--accent,#FF4757);width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🛵</div>',
+                iconSize: [36, 36], iconAnchor: [18, 18], className: ''
+            });
+
+            // Ícono destino
+            const iconoDest = L.divIcon({
+                html: '<div style="background:#34C759;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
+                iconSize: [36, 36], iconAnchor: [18, 36], className: ''
+            });
+
+            markerRep = L.marker([latRep, lngRep], { icon: iconoRep }).addTo(map);
+            markerDest = L.marker([latDest, lngDest], { icon: iconoDest }).addTo(map)
+                .bindPopup('Tu dirección').openPopup();
+
+            map.fitBounds([[latRep, lngRep], [latDest, lngDest]], { padding: [40, 40] });
+        }
+
+        // ── Actualizar mapa ───────────────────────────────────────────────────────
+        function actualizarMapa(data) {
+            const { lat_actual, lng_actual, lat_destino, lng_destino, ruta_restante } = data;
+
+            if (!map) {
+                initMap(lat_actual, lng_actual, lat_destino, lng_destino);
+            }
+
+            // Mover pin repartidor
+            if (markerRep) markerRep.setLatLng([lat_actual, lng_actual]);
+
+            // Dibujar ruta restante
+            if (polylineRuta) polylineRuta.remove();
+            if (ruta_restante && ruta_restante.length > 1) {
+                polylineRuta = L.polyline(ruta_restante, {
+                    color: '#FF4757', weight: 4, opacity: 0.8, dashArray: '8, 4'
+                }).addTo(map);
+            }
+        }
+
+        // ── Actualizar UI ─────────────────────────────────────────────────────────
+        function actualizarUI(data) {
+            const { estado, repartidor_nombre, repartidor_telefono, eta_minutos } = data;
+
+            document.getElementById('loading-state').style.display = 'none';
+            document.getElementById('sin-asignar').style.display = 'none';
+            document.getElementById('contenido-tracking').style.display = 'block';
+
+            // Repartidor
+            document.getElementById('rep-nombre').innerText = repartidor_nombre || '—';
+            document.getElementById('rep-tel').innerText = repartidor_telefono ? '📱 ' + repartidor_telefono : '—';
+            document.getElementById('eta-badge').innerText = eta_minutos > 0 ? '~' + eta_minutos + ' min' : '¡Llegando!';
+
+            // Progress steps
+            const stepMap = { 'Pendiente': 0, 'Aprobado': 1, 'En camino': 2, 'Entregado': 3 };
+            const stepActual = stepMap[estado] ?? 2;
+            const porcentajes = [0, 33, 66, 100];
+
+            document.getElementById('progress-line').style.width = porcentajes[stepActual] + '%';
+
+            for (let i = 0; i <= 3; i++) {
+                const dot = document.getElementById('step-' + i);
+                const lbl = document.getElementById('lbl-' + i);
+                dot.classList.remove('done', 'active');
+                if (lbl) lbl.classList.remove('active');
+                if (i < stepActual) {
+                    dot.classList.add('done');
+                    dot.innerText = '✓';
+                } else if (i === stepActual) {
+                    dot.classList.add('active');
+                    if (lbl) lbl.classList.add('active');
+                }
+            }
+
+            // Banner entregado
+            if (estado === 'Entregado') {
+                document.getElementById('delivered-banner').style.display = 'block';
+                document.getElementById('eta-badge').innerText = '✓ Entregado';
+                if (ws) ws.close();
+            }
+
+            // Actualizar mapa
+            actualizarMapa(data);
+        }
+
+        // ── WebSocket tracking ────────────────────────────────────────────────────
+        function conectarTracking() {
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(proto + '//' + location.host + '/ws/tracking/' + ordenId);
+
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                actualizarUI(data);
+            };
+
+            ws.onclose = () => {
+                // Reintentar si no fue entregado
+                const banner = document.getElementById('delivered-banner');
+                if (banner.style.display === 'none') {
+                    setTimeout(conectarTracking, 4000);
+                }
+            };
+
+            ws.onerror = () => ws.close();
+        }
+
+        // ── Fallback REST si WS no conecta ───────────────────────────────────────
+        async function fetchTracking() {
+            try {
+                const res = await fetch('/ruteo/asignacion/' + ordenId, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (res.status === 404) {
+                    document.getElementById('loading-state').style.display = 'none';
+                    document.getElementById('sin-asignar').style.display = 'block';
+                    setTimeout(fetchTracking, 5000);
+                    return;
+                }
+                if (res.ok) {
+                    const data = await res.json();
+                    actualizarUI(data);
+                }
+            } catch { }
+        }
+
+        // Primero intenta WS, si falla usa REST
+        setTimeout(() => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                fetchTracking();
+                setInterval(fetchTracking, 8000);
+            }
+        }, 5000);
+
+        conectarTracking();
+        fetchTracking(); // carga inicial inmediata
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaborGo - Panel de Control NOC</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            background-color: #f1f2f6;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, #2f3542, #57606f);
+            color: white;
+            border-radius: 0 0 15px 15px;
+        }
+
+        .card-monitor {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+        }
+
+        .status-badge {
+            font-weight: bold;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+
+        .status-pendiente {
+            background-color: #ffeaa7;
+            color: #d63031;
+        }
+
+        .status-aprobado {
+            background-color: #c2f0c2;
+            color: #27ae60;
+        }
+
+        .ruteo-encamino {
+            background-color: #dfe6e9;
+            color: #2d3436;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        .ruteo-entregado {
+            background-color: #00b894;
+            color: white;
+            font-size: 0.75rem;
+            padding: 3px 8px;
+            border-radius: 10px;
+        }
+
+        #auth-guard {
+            position: fixed;
+            inset: 0;
+            background: #2f3542;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: #fff;
+        }
+
+        #auth-guard h2 {
+            font-size: 1.4rem;
+            margin-top: 16px;
+        }
+
+        #auth-guard p {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 0.9rem;
+        }
+
+        .ws-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 6px;
+        }
+
+        .ws-dot.conectado {
+            background: #2ed573;
+            animation: pulse 1.5s infinite;
+        }
+
+        .ws-dot.polling {
+            background: #ffa502;
+            animation: pulse 1.5s infinite;
+        }
+
+        .ws-dot.desconectado {
+            background: #ff4757;
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.4
+            }
+        }
+
+        .stars-container {
+            display: flex;
+            gap: 3px;
+            align-items: center;
+        }
+
+        .star {
+            font-size: 1.1rem;
+            cursor: pointer;
+            color: #dee2e6;
+            transition: color 0.15s;
+        }
+
+        .star.filled {
+            color: #ffc107;
+        }
+
+        .star.disabled {
+            cursor: default;
+        }
+
+        .star:hover:not(.disabled) {
+            color: #ffc107;
+            transform: scale(1.2);
+        }
+
+        .cache-badge {
+            font-size: 0.65rem;
+            background: #00b894;
+            color: white;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+        }
+
+        .gps-link {
+            font-size: 0.75rem;
+            color: #0984e3;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .gps-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Modal de tracking */
+        .tracking-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(6px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .tracking-modal.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .tracking-card {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 560px;
+            overflow: hidden;
+            transform: scale(0.92);
+            transition: transform 0.3s ease;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .tracking-modal.open .tracking-card {
+            transform: scale(1);
+        }
+
+        .tracking-header {
+            background: linear-gradient(135deg, #2f3542, #57606f);
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .tracking-header h5 {
+            margin: 0;
+            font-weight: 800;
+            font-size: 1rem;
+        }
+
+        .tracking-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .tracking-close:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        #tracking-map {
+            height: 280px;
+            width: 100%;
+        }
+
+        .tracking-info {
+            padding: 14px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .tracking-rep {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tracking-rep-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #ff4757, #ff6b35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+        }
+
+        .tracking-rep-name {
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .tracking-rep-tel {
+            font-size: 0.75rem;
+            color: #8e8e93;
+        }
+
+        .eta-pill {
+            background: #fff3e0;
+            color: #e65100;
+            padding: 6px 14px;
+            border-radius: 100px;
+            font-weight: 800;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="auth-guard">
+        <div class="spinner-border text-light" role="status"></div>
+        <h2>Verificando acceso...</h2>
+        <p>Solo administradores autorizados</p>
+    </div>
+
+    <div id="contenido-admin" style="display:none;">
+        <div class="dashboard-header py-4 mb-4 shadow">
+            <div class="container d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-1 fw-bold">
+                        <i class="fa-solid fa-chart-line me-2 text-danger"></i>Panel de Administración Live
+                    </h1>
+                    <p class="mb-0 text-white-50 small">Consola operativa de monitoreo de órdenes</p>
+                </div>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="text-white-50 small">
+                        <span class="ws-dot desconectado" id="ws-dot"></span>
+                        <span id="ws-label">Conectando...</span>
+                    </span>
+                    <span id="cache-indicator" style="display:none;">
+                        <span class="cache-badge">⚡ Redis</span>
+                    </span>
+                    <span class="text-white-50 small" id="label-admin-user"></span>
+                    <button class="btn btn-sm btn-outline-light" onclick="cerrarSesion()">
+                        <i class="fa-solid fa-right-from-bracket me-1"></i>Salir
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <div class="alert alert-danger shadow-sm border-0" id="error-banner" style="display:none;">
+                <strong>Error de comunicación:</strong> No se pudo sincronizar el panel.
+            </div>
+            <div class="card card-monitor p-4 mb-5">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">Órdenes Recientes en Base de Datos</h5>
+                    <span class="text-muted small" id="ultima-actualizacion">—</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead class="table-dark">
+                            <tr>
+                                <th>ID</th>
+                                <th>Cliente</th>
+                                <th>Dirección</th>
+                                <th>Pago</th>
+                                <th>Monto</th>
+                                <th>Estado</th>
+                                <th>🛵 Repartidor</th>
+                                <th>⭐ Calificación</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpo-tabla">
+                            <tr>
+                                <td colspan="9" class="text-center py-4">Cargando...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Tracking con Mapa -->
+    <div class="tracking-modal" id="tracking-modal">
+        <div class="tracking-card">
+            <div class="tracking-header">
+                <h5 id="tracking-titulo">🛵 Tracking Orden #—</h5>
+                <button class="tracking-close" onclick="cerrarTracking()">✕</button>
+            </div>
+            <div id="tracking-map"></div>
+            <div class="tracking-info">
+                <div class="tracking-rep">
+                    <div class="tracking-rep-icon">🛵</div>
+                    <div>
+                        <div class="tracking-rep-name" id="t-rep-nombre">—</div>
+                        <div class="tracking-rep-tel" id="t-rep-tel">—</div>
+                    </div>
+                </div>
+                <div class="eta-pill" id="t-eta">— min</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Protección Triple ─────────────────────────────────────────────────────
+        function verificarAcceso() {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('k') !== 'saborgo2026noc') { window.location.href = '/'; return false; }
+            const token = localStorage.getItem('token');
+            const user = localStorage.getItem('user');
+            if (!token || !user) { window.location.href = '/login.html'; return false; }
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+                    localStorage.removeItem('token'); localStorage.removeItem('user');
+                    window.location.href = '/login.html'; return false;
+                }
+            } catch { window.location.href = '/login.html'; return false; }
+            document.getElementById('auth-guard').style.display = 'none';
+            document.getElementById('contenido-admin').style.display = 'block';
+            document.getElementById('label-admin-user').innerText = '👤 ' + user;
+            return true;
+        }
+
+        function cerrarSesion() {
+            localStorage.removeItem('token'); localStorage.removeItem('user');
+            window.location.href = '/login.html';
+        }
+
+        // ── WebSocket + fallback polling ──────────────────────────────────────────
+        let ws, wsActivo = false, pollingInterval = null, wsIntentos = 0;
+        const MAX_WS_INTENTOS = 3;
+
+        function conectarWS() {
+            if (wsIntentos >= MAX_WS_INTENTOS) { iniciarPolling(); return; }
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(proto + '//' + location.host + '/ws/pedidos');
+            const timeout = setTimeout(() => { if (ws.readyState !== WebSocket.OPEN) ws.close(); }, 4000);
+            ws.onopen = () => {
+                clearTimeout(timeout); wsActivo = true; wsIntentos = 0;
+                if (pollingInterval) { clearInterval(pollingInterval); pollingInterval = null; }
+                document.getElementById('ws-dot').className = 'ws-dot conectado';
+                document.getElementById('ws-label').innerText = 'Tiempo real';
+            };
+            ws.onmessage = (e) => {
+                renderizarTabla(JSON.parse(e.data));
+                document.getElementById('cache-indicator').style.display = 'inline';
+            };
+            ws.onclose = () => {
+                clearTimeout(timeout); wsActivo = false; wsIntentos++;
+                document.getElementById('ws-dot').className = 'ws-dot desconectado';
+                document.getElementById('ws-label').innerText = 'Reconectando...';
+                wsIntentos >= MAX_WS_INTENTOS ? iniciarPolling() : setTimeout(conectarWS, 3000);
+            };
+            ws.onerror = () => ws.close();
+        }
+
+        function iniciarPolling() {
+            if (pollingInterval) return;
+            document.getElementById('ws-dot').className = 'ws-dot polling';
+            document.getElementById('ws-label').innerText = 'Polling (5s)';
+            fetchPedidos();
+            pollingInterval = setInterval(fetchPedidos, 5000);
+        }
+
+        async function fetchPedidos() {
+            try {
+                const res = await fetch('/pedidos/recientes', { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                if (!res.ok) throw new Error();
+                renderizarTabla(await res.json());
+                document.getElementById('cache-indicator').style.display = 'inline';
+                document.getElementById('error-banner').style.display = 'none';
+            } catch { document.getElementById('error-banner').style.display = 'block'; }
+        }
+
+        // ── Tracking con Mapa Leaflet ─────────────────────────────────────────────
+        let trackingMap = null;
+        let trackingMarkerRep = null;
+        let trackingMarkerDest = null;
+        let trackingPolyline = null;
+        let trackingWS = null;
+        let trackingInterval = null;
+
+        async function abrirTracking(ordenId) {
+            document.getElementById('tracking-titulo').innerText = '🛵 Tracking Orden #' + ordenId;
+            document.getElementById('tracking-modal').classList.add('open');
+
+            // Inicializar mapa si no existe
+            if (!trackingMap) {
+                trackingMap = L.map('tracking-map', { zoomControl: true, attributionControl: false });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(trackingMap);
+            }
+
+            // Cargar datos iniciales
+            await actualizarTrackingMapa(ordenId);
+
+            // WebSocket de tracking
+            cerrarTrackingWS();
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            trackingWS = new WebSocket(proto + '//' + location.host + '/ws/tracking/' + ordenId);
+            trackingWS.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                renderizarTrackingDatos(data);
+            };
+            trackingWS.onclose = () => {
+                // Fallback polling
+                trackingInterval = setInterval(() => actualizarTrackingMapa(ordenId), 8000);
+            };
+        }
+
+        async function actualizarTrackingMapa(ordenId) {
+            try {
+                const res = await fetch('/ruteo/asignacion/' + ordenId, {
+                    headers: { 'ngrok-skip-browser-warning': 'true' }
+                });
+                if (!res.ok) return;
+                const data = await res.json();
+                renderizarTrackingDatos(data);
+            } catch { }
+        }
+
+        function renderizarTrackingDatos(data) {
+            if (!trackingMap) return;
+
+            const { lat_actual, lng_actual, lat_destino, lng_destino,
+                ruta_restante, eta_minutos, repartidor_nombre, repartidor_telefono, estado } = data;
+
+            // Íconos
+            const iconRep = L.divIcon({
+                html: '<div style="background:#ff4757;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🛵</div>',
+                iconSize: [38, 38], iconAnchor: [19, 19], className: ''
+            });
+            const iconDest = L.divIcon({
+                html: '<div style="background:#34C759;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;border:3px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.3)">🏠</div>',
+                iconSize: [38, 38], iconAnchor: [19, 38], className: ''
+            });
+
+            // Actualizar o crear marcadores
+            if (trackingMarkerRep) {
+                trackingMarkerRep.setLatLng([lat_actual, lng_actual]);
+            } else {
+                trackingMarkerRep = L.marker([lat_actual, lng_actual], { icon: iconRep }).addTo(trackingMap);
+            }
+            if (trackingMarkerDest) {
+                trackingMarkerDest.setLatLng([lat_destino, lng_destino]);
+            } else {
+                trackingMarkerDest = L.marker([lat_destino, lng_destino], { icon: iconDest })
+                    .addTo(trackingMap).bindPopup('Destino del cliente');
+            }
+
+            // Ruta
+            if (trackingPolyline) trackingPolyline.remove();
+            if (ruta_restante && ruta_restante.length > 1) {
+                trackingPolyline = L.polyline(ruta_restante, {
+                    color: '#ff4757', weight: 4, opacity: 0.8, dashArray: '8,4'
+                }).addTo(trackingMap);
+            }
+
+            // Centrar mapa
+            trackingMap.fitBounds([[lat_actual, lng_actual], [lat_destino, lng_destino]], { padding: [30, 30] });
+            setTimeout(() => trackingMap.invalidateSize(), 100);
+
+            // Info
+            document.getElementById('t-rep-nombre').innerText = repartidor_nombre || '—';
+            document.getElementById('t-rep-tel').innerText = repartidor_telefono ? '📱 ' + repartidor_telefono : '—';
+            document.getElementById('t-eta').innerText = estado === 'Entregado' ? '✓ Entregado' : (eta_minutos > 0 ? '~' + eta_minutos + ' min' : '¡Llegando!');
+        }
+
+        function cerrarTracking() {
+            document.getElementById('tracking-modal').classList.remove('open');
+            cerrarTrackingWS();
+            // Limpiar mapa para la próxima apertura
+            if (trackingMarkerRep) { trackingMarkerRep.remove(); trackingMarkerRep = null; }
+            if (trackingMarkerDest) { trackingMarkerDest.remove(); trackingMarkerDest = null; }
+            if (trackingPolyline) { trackingPolyline.remove(); trackingPolyline = null; }
+            if (trackingMap) { trackingMap.remove(); trackingMap = null; }
+        }
+
+        function cerrarTrackingWS() {
+            if (trackingWS) { trackingWS.close(); trackingWS = null; }
+            if (trackingInterval) { clearInterval(trackingInterval); trackingInterval = null; }
+        }
+
+        // Cerrar con ESC o click fuera
+        document.getElementById('tracking-modal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('tracking-modal')) cerrarTracking();
+        });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarTracking(); });
+
+        // ── Caché asignaciones ────────────────────────────────────────────────────
+        const asignacionesCache = {};
+
+        async function fetchAsignacion(ordenId) {
+            try {
+                const res = await fetch('/ruteo/asignacion/' + ordenId, { headers: { 'ngrok-skip-browser-warning': 'true' } });
+                if (!res.ok) return null;
+                const data = await res.json();
+                asignacionesCache[ordenId] = data;
+                return data;
+            } catch { return null; }
+        }
+
+        function renderizarRepartidor(ordenId, estado) {
+            const cached = asignacionesCache[ordenId];
+            if (!cached) {
+                if (estado.toLowerCase() === 'aprobado') {
+                    fetchAsignacion(ordenId).then(data => {
+                        const celda = document.getElementById('ruteo-' + ordenId);
+                        if (celda && data) celda.innerHTML = buildRuteoHTML(data, ordenId);
+                    });
+                    return '<span id="ruteo-' + ordenId + '" class="text-muted small">Asignando...</span>';
+                }
+                return '<span id="ruteo-' + ordenId + '" class="text-muted small">—</span>';
+            }
+            return '<span id="ruteo-' + ordenId + '">' + buildRuteoHTML(cached, ordenId) + '</span>';
+        }
+
+        function buildRuteoHTML(data, ordenId) {
+            const badge = data.estado === 'Entregado'
+                ? '<span class="ruteo-entregado">✓ Entregado</span>'
+                : '<span class="ruteo-encamino">🛵 En camino</span>';
+            const aprobado = data.estado !== 'Pendiente';
+            const mapaBtn = aprobado
+                ? `<span class="gps-link d-block mt-1" onclick="abrirTracking(${ordenId})">🗺️ Ver en mapa →</span>`
+                : '';
+            return '<div><strong>' + data.repartidor_nombre + '</strong><br>' + badge +
+                (data.eta_minutos > 0 ? '<small class="text-muted d-block">~' + data.eta_minutos + ' min</small>' : '') +
+                mapaBtn + '</div>';
+        }
+
+        // ── Calificación ──────────────────────────────────────────────────────────
+        async function calificar(ordenId, estrellas) {
+            try {
+                const res = await fetch('/pedidos/' + ordenId + '/calificar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                    body: JSON.stringify({ estrellas })
+                });
+                if (!res.ok) { const e = await res.json(); alert(e.detail || 'Error al calificar'); return; }
+                if (!wsActivo) fetchPedidos();
+            } catch { alert('Error de conexión al calificar'); }
+        }
+
+        function renderizarEstrellas(ordenId, calificacion, aprobado) {
+            if (calificacion !== null && calificacion !== undefined) {
+                let h = '<div class="stars-container">';
+                for (let i = 1; i <= 5; i++) h += '<span class="star ' + (i <= calificacion ? 'filled ' : '') + 'disabled">★</span>';
+                return h + '<small class="text-muted ms-1">' + calificacion + '/5</small></div>';
+            }
+            if (!aprobado) return '<span class="text-muted small">—</span>';
+            let h = '<div class="stars-container" id="stars-' + ordenId + '">';
+            for (let i = 1; i <= 5; i++) {
+                h += '<span class="star" onmouseover="hoverEstrellas(' + ordenId + ',' + i + ')" onmouseout="resetEstrellas(' + ordenId + ')" onclick="calificar(' + ordenId + ',' + i + ')">★</span>';
+            }
+            return h + '</div>';
+        }
+
+        function hoverEstrellas(id, n) { document.querySelectorAll('#stars-' + id + ' .star').forEach((s, i) => s.classList.toggle('filled', i < n)); }
+        function resetEstrellas(id) { document.querySelectorAll('#stars-' + id + ' .star').forEach(s => s.classList.remove('filled')); }
+
+        // ── Tabla ─────────────────────────────────────────────────────────────────
+        function renderizarTabla(pedidos) {
+            document.getElementById('ultima-actualizacion').innerText = 'Actualizado: ' + new Date().toLocaleTimeString();
+            const tabla = document.getElementById('cuerpo-tabla');
+            if (!pedidos || pedidos.length === 0) {
+                tabla.innerHTML = '<tr><td colspan="9" class="text-center py-4">No hay pedidos registrados.</td></tr>';
+                return;
+            }
+            tabla.innerHTML = '';
+            pedidos.forEach(p => {
+                const aprobado = p.estado.toLowerCase() === 'aprobado';
+                const badge = aprobado ? 'status-aprobado' : 'status-pendiente';
+                const msg = encodeURIComponent('¡Hola ' + p.cliente + '! Tu pedido de SaborGo ha sido aprobado. Lo enviaremos a: ' + p.direccion + '.');
+                const boton = aprobado
+                    ? '<a href="https://wa.me/51999999999?text=' + msg + '" target="_blank" class="btn btn-success btn-sm rounded-pill fw-bold"><i class="fa-brands fa-whatsapp me-1"></i>Despachar</a>'
+                    : '<button class="btn btn-secondary btn-sm rounded-pill" disabled><i class="fa-solid fa-hourglass-start me-1"></i>Esperando</button>';
+                tabla.innerHTML += '<tr>' +
+                    '<td class="fw-bold">#' + p.id + '</td>' +
+                    '<td>' + p.cliente + '</td>' +
+                    '<td>' + p.direccion + '</td>' +
+                    '<td>' + p.metodo_pago + '</td>' +
+                    '<td class="fw-bold text-danger">S/. ' + p.total.toFixed(2) + '</td>' +
+                    '<td><span class="status-badge ' + badge + '">' + p.estado.toUpperCase() + '</span></td>' +
+                    '<td>' + renderizarRepartidor(p.id, p.estado) + '</td>' +
+                    '<td>' + renderizarEstrellas(p.id, p.calificacion, aprobado) + '</td>' +
+                    '<td>' + boton + '</td></tr>';
+            });
+            setTimeout(refrescarGPS, 10000);
+        }
+
+        async function refrescarGPS() {
+            for (const ordenId of Object.keys(asignacionesCache)) {
+                const data = await fetchAsignacion(parseInt(ordenId));
+                if (data) {
+                    const celda = document.getElementById('ruteo-' + ordenId);
+                    if (celda) celda.innerHTML = buildRuteoHTML(data, parseInt(ordenId));
+                }
+            }
+        }
+
+        if (verificarAcceso()) conectarWS();
+    </script>
+</body>
+
+</html>

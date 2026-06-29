@@ -1,0 +1,134 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: saborgo_db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: saborgo_user
+      POSTGRES_PASSWORD: saborgo_password
+      POSTGRES_DB: saborgo_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - saborgo-net
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis_cache
+    ports:
+      - "6379:6379"
+    networks:
+      - saborgo-net
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper_service
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - saborgo-net
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_broker
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://10.201.191.188:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+    networks:
+      - saborgo-net
+
+  auth:
+    build: ./auth
+    container_name: auth_service
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://saborgo_user:saborgo_password@db:5432/saborgo_db
+    depends_on:
+      - db
+    networks:
+      - saborgo-net
+
+  catalogo:
+    build: ./catalogo
+    container_name: catalogo_service
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://saborgo_user:saborgo_password@db:5432/saborgo_db
+    depends_on:
+      - db
+    networks:
+      - saborgo-net
+
+  pedidos:
+    build: ./pedidos
+    container_name: pedidos_service
+    restart: always
+    environment:
+      - DATABASE_URL=postgresql://saborgo_user:saborgo_password@db:5432/saborgo_db
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - REDIS_URL=redis://redis:6379/0
+    depends_on:
+      - db
+      - kafka
+      - redis
+    networks:
+      - saborgo-net
+
+  gateway:
+    image: nginx:alpine
+    container_name: api_gateway
+    ports:
+      - "0.0.0.0:80:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - auth
+      - catalogo
+      - pedidos
+    networks:
+      - saborgo-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus_service
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    networks:
+      - saborgo-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana_service
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - saborgo-net
+
+volumes:
+  postgres_data:
+  grafana_data:
+
+networks:
+  saborgo-net:
+    driver: bridge

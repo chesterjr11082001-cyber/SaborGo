@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: catalogo
+  namespace: saborgo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: catalogo
+  template:
+    metadata:
+      labels:
+        app: catalogo
+    spec:
+      containers:
+      - name: catalogo
+        image: saborgo-catalogo:v1
+        imagePullPolicy: Never
+        env:
+        - name: DATABASE_URL
+          value: "postgresql://saborgo_user:saborgo_password@db:5432/saborgo_db"
+        ports:
+        - containerPort: 3001
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: catalogo-service
+  namespace: saborgo
+spec:
+  selector:
+    app: catalogo
+  ports:
+  - port: 3001
+    targetPort: 3001

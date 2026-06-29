@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s # Recolectar datos cada 5 segundos
+
+scrape_configs:
+  - job_name: 'pedidos_service'
+    static_configs:
+      - targets: ['pedidos:3002'] # Apuntamos al microservicio de pedidos

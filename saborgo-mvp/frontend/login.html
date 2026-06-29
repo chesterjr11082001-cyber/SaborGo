@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SaborGo — Acceso</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        body {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(145deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+            padding: 20px;
+        }
+
+        /* Blobs de fondo */
+        .blob {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.18;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: var(--accent);
+            top: -100px;
+            right: -100px;
+            animation: float1 8s ease-in-out infinite;
+        }
+
+        .blob-2 {
+            width: 300px;
+            height: 300px;
+            background: #FF6B35;
+            bottom: -80px;
+            left: -80px;
+            animation: float2 10s ease-in-out infinite;
+        }
+
+        @keyframes float1 {
+
+            0%,
+            100% {
+                transform: translate(0, 0)
+            }
+
+            50% {
+                transform: translate(-30px, 30px)
+            }
+        }
+
+        @keyframes float2 {
+
+            0%,
+            100% {
+                transform: translate(0, 0)
+            }
+
+            50% {
+                transform: translate(30px, -20px)
+            }
+        }
+
+        .login-card {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(32px) saturate(180%);
+            -webkit-backdrop-filter: blur(32px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: var(--r-2xl);
+            padding: 36px 28px 40px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            animation: slideUp 0.7s var(--spring) both;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.96);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        /* Logo */
+        .logo-wrap {
+            text-align: center;
+            margin-bottom: 28px;
+        }
+
+        .logo-icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 22px;
+            background: linear-gradient(135deg, var(--accent), #FF6B35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            margin: 0 auto 12px;
+            box-shadow: 0 8px 24px rgba(255, 71, 87, 0.4);
+            animation: logoFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes logoFloat {
+
+            0%,
+            100% {
+                transform: translateY(0)
+            }
+
+            50% {
+                transform: translateY(-6px)
+            }
+        }
+
+        .logo-name {
+            font-size: 1.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            color: white;
+        }
+
+        .logo-name span {
+            color: var(--accent);
+        }
+
+        .logo-sub {
+            font-size: 0.78rem;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 2px;
+            font-weight: 500;
+        }
+
+        /* Mode toggle */
+        .mode-toggle {
+            display: flex;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 100px;
+            padding: 3px;
+            margin-bottom: 24px;
+            gap: 3px;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 9px;
+            border: none;
+            border-radius: 100px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s var(--spring);
+            color: rgba(255, 255, 255, 0.5);
+            background: transparent;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .mode-btn.active {
+            background: white;
+            color: var(--text);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .mode-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Inputs */
+        .field {
+            margin-bottom: 14px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.76rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 6px;
+        }
+
+        .field .input {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .field .input::placeholder {
+            color: rgba(255, 255, 255, 0.3);
+        }
+
+        .field .input:focus {
+            background: rgba(255, 255, 255, 0.14);
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.2);
+        }
+
+        .field .input.error {
+            border-color: #FF6B6B;
+            box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.2);
+        }
+
+        .err-msg {
+            color: #FF6B6B;
+            font-size: 0.78rem;
+            font-weight: 500;
+            margin-bottom: 10px;
+            display: none;
+        }
+
+        .err-msg.show {
+            display: block;
+        }
+
+        .btn-login {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 100px;
+            font-size: 1rem;
+            font-weight: 700;
+            background: var(--accent);
+            color: white;
+            cursor: pointer;
+            margin-top: 4px;
+            box-shadow: 0 6px 20px rgba(255, 71, 87, 0.4);
+            transition: transform 0.15s var(--spring), background 0.2s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-login:hover {
+            background: var(--accent-dark);
+            box-shadow: 0 8px 24px rgba(255, 71, 87, 0.5);
+        }
+
+        .btn-login:active {
+            transform: scale(0.96);
+        }
+
+        .divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 18px 0;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        .divider span {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: 500;
+        }
+
+        .btn-guest {
+            width: 100%;
+            padding: 14px;
+            border: 1.5px solid rgba(255, 255, 255, 0.18);
+            border-radius: 100px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.7);
+            background: transparent;
+            cursor: pointer;
+            transition: all 0.2s var(--spring);
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .btn-guest:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .btn-guest:active {
+            transform: scale(0.96);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <div class="login-card" id="card">
+        <!-- Logo -->
+        <div class="logo-wrap">
+            <div class="logo-icon">🍽️</div>
+            <div class="logo-name">Sabor<span>Go</span></div>
+            <div class="logo-sub">Comida peruana a tu puerta</div>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" id="btn-login-mode" onclick="setMode('login')">Iniciar sesión</button>
+            <button class="mode-btn" id="btn-reg-mode" onclick="setMode('registro')">Registrarse</button>
+        </div>
+
+        <!-- Form -->
+        <div class="field">
+            <label>Usuario</label>
+            <input class="input" type="text" id="username" placeholder="Tu usuario" autocomplete="off">
+        </div>
+        <div class="field">
+            <label>Contraseña</label>
+            <input class="input" type="password" id="password" placeholder="••••••••">
+        </div>
+        <p class="err-msg" id="err-msg"></p>
+        <button class="btn-login" id="submit-btn" onclick="ejecutarAuth()">Entrar</button>
+
+        <div class="divider"><span>o</span></div>
+        <button class="btn-guest" onclick="window.location.href='/'">Explorar sin cuenta →</button>
+    </div>
+
+    <script>
+        let mode = 'login';
+
+        // Si ya está logueado, redirigir
+        if (localStorage.getItem('token') && localStorage.getItem('user')) {
+            window.location.href = '/';
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('btn-login-mode').classList.toggle('active', m === 'login');
+            document.getElementById('btn-reg-mode').classList.toggle('active', m === 'registro');
+            document.getElementById('submit-btn').innerText = m === 'login' ? 'Entrar' : 'Crear cuenta';
+            document.getElementById('err-msg').classList.remove('show');
+            // Animate card
+            const card = document.getElementById('card');
+            card.style.transform = 'scale(0.98)';
+            setTimeout(() => card.style.transform = '', 150);
+        }
+
+        async function ejecutarAuth() {
+            const user = document.getElementById('username').value.trim();
+            const pass = document.getElementById('password').value;
+            const errEl = document.getElementById('err-msg');
+            const card = document.getElementById('card');
+            errEl.classList.remove('show');
+
+            if (!user || !pass) {
+                errEl.innerText = '⚠️ Completa todos los campos';
+                errEl.classList.add('show');
+                document.getElementById('username').classList.add('error');
+                document.getElementById('password').classList.add('error');
+                card.classList.add('shake');
+                setTimeout(() => {
+                    card.classList.remove('shake');
+                    document.getElementById('username').classList.remove('error');
+                    document.getElementById('password').classList.remove('error');
+                }, 500);
+                return;
+            }
+
+            const btn = document.getElementById('submit-btn');
+            btn.innerText = '...'; btn.disabled = true;
+
+            const url = mode === 'login' ? '/auth/login' : '/auth/registro';
+            try {
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (mode === 'login') {
+                        localStorage.setItem('token', data.access_token);
+                        localStorage.setItem('user', user);
+                        btn.innerText = '✓ Entrando...';
+                        btn.style.background = '#34C759';
+                        setTimeout(() => window.location.href = '/', 600);
+                    } else {
+                        errEl.style.color = '#30D158';
+                        errEl.innerText = '✅ ¡Cuenta creada! Ahora inicia sesión';
+                        errEl.classList.add('show');
+                        setTimeout(() => setMode('login'), 1500);
+                        btn.innerText = 'Crear cuenta'; btn.disabled = false;
+                    }
+                } else {
+                    errEl.innerText = '⚠️ ' + (data.detail || 'Credenciales incorrectas');
+                    errEl.classList.add('show');
+                    document.getElementById('password').classList.add('error');
+                    card.classList.add('shake');
+                    setTimeout(() => {
+                        card.classList.remove('shake');
+                        document.getElementById('password').classList.remove('error');
+                    }, 500);
+                    btn.innerText = mode === 'login' ? 'Entrar' : 'Crear cuenta';
+                    btn.disabled = false;
+                }
+            } catch {
+                errEl.innerText = '⚠️ Error de conexión';
+                errEl.classList.add('show');
+                btn.innerText = mode === 'login' ? 'Entrar' : 'Crear cuenta';
+                btn.disabled = false;
+            }
+        }
+
+        document.getElementById('password').addEventListener('keydown', e => {
+            if (e.key === 'Enter') ejecutarAuth();
+        });
+    </script>
+</body>
+
+</html>

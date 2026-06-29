@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>SaborGo — Checkout</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            -webkit-font-smoothing: antialiased;
+        }
+
+        body {
+            font-family: -apple-system, 'Inter', BlinkMacSystemFont, sans-serif;
+            background: #F2F2F7;
+            color: #1C1C1E;
+            padding-bottom: 120px;
+            min-height: 100vh;
+        }
+
+        /* Header */
+        .ck-header {
+            position: sticky;
+            top: 0;
+            z-index: 40;
+            background: rgba(242, 242, 247, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(60, 60, 67, 0.08);
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 20px;
+        }
+
+        .back-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: white;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            flex-shrink: 0;
+        }
+
+        .ck-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
+
+        /* Section */
+        .section {
+            background: white;
+            border-radius: 20px;
+            margin: 12px 16px;
+            padding: 18px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            color: #8E8E93;
+            text-transform: uppercase;
+            margin-bottom: 14px;
+        }
+
+        /* Items */
+        .ck-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #F2F2F7;
+        }
+
+        .ck-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .ck-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            object-fit: cover;
+            background: #F2F2F7;
+            flex-shrink: 0;
+        }
+
+        .ck-item-name {
+            font-size: 0.87rem;
+            font-weight: 600;
+        }
+
+        .ck-item-price {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #FF4757;
+            margin-top: 2px;
+        }
+
+        .ck-remove {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 59, 48, 0.1);
+            border: none;
+            color: #FF3B30;
+            font-size: 0.7rem;
+            cursor: pointer;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        /* Input */
+        .input {
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.95rem;
+            color: #1C1C1E;
+            background: #F2F2F7;
+            border: 1.5px solid rgba(60, 60, 67, 0.12);
+            border-radius: 14px;
+            padding: 13px 15px;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .input:focus {
+            border-color: #FF4757;
+            box-shadow: 0 0 0 4px rgba(255, 71, 87, 0.12);
+            background: white;
+        }
+
+        .input.error {
+            border-color: #FF3B30;
+            box-shadow: 0 0 0 4px rgba(255, 59, 48, 0.12);
+        }
+
+        .field-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #8E8E93;
+            margin-bottom: 6px;
+        }
+
+        .field-wrap {
+            margin-bottom: 12px;
+        }
+
+        .field-wrap:last-child {
+            margin-bottom: 0;
+        }
+
+        .field-err {
+            color: #FF3B30;
+            font-size: 0.76rem;
+            font-weight: 500;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .field-err.show {
+            display: block;
+        }
+
+        /* Botones GPS / Mapa */
+        .loc-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        .loc-btn {
+            padding: 13px 10px;
+            border-radius: 14px;
+            border: 2px solid rgba(60, 60, 67, 0.15);
+            background: #F2F2F7;
+            font-family: inherit;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: all 0.18s;
+            -webkit-tap-highlight-color: transparent;
+            color: #3C3C43;
+        }
+
+        .loc-btn:active {
+            transform: scale(0.95);
+        }
+
+        .loc-btn.gps-btn {
+            border-color: #FF4757;
+            color: #FF4757;
+            background: rgba(255, 71, 87, 0.07);
+        }
+
+        .loc-btn.map-btn {
+            border-color: #1E90FF;
+            color: #1E90FF;
+            background: rgba(30, 144, 255, 0.07);
+        }
+
+        .loc-btn.map-open {
+            border-color: #FF3B30;
+            color: #FF3B30;
+            background: rgba(255, 59, 48, 0.07);
+        }
+
+        .loc-btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Status geocoding */
+        .geo-box {
+            display: flex;
+            align-items: flex-start;
+            gap: 9px;
+            padding: 10px 13px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+            font-size: 0.78rem;
+            font-weight: 500;
+            line-height: 1.4;
+            background: #F2F2F7;
+            color: #8E8E93;
+            border: 1px solid rgba(60, 60, 67, 0.1);
+            transition: all 0.25s;
+        }
+
+        .geo-box.ok {
+            background: rgba(52, 199, 89, 0.1);
+            color: #27ae60;
+            border-color: rgba(52, 199, 89, 0.25);
+        }
+
+        .geo-box.err {
+            background: rgba(255, 59, 48, 0.1);
+            color: #FF3B30;
+            border-color: rgba(255, 59, 48, 0.25);
+        }
+
+        .geo-box.run {
+            background: rgba(30, 144, 255, 0.09);
+            color: #1E90FF;
+            border-color: rgba(30, 144, 255, 0.2);
+        }
+
+        .geo-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+            margin-top: 3px;
+            background: #C7C7CC;
+        }
+
+        .geo-box.ok .geo-dot {
+            background: #34C759;
+        }
+
+        .geo-box.err .geo-dot {
+            background: #FF3B30;
+        }
+
+        .geo-box.run .geo-dot {
+            background: #1E90FF;
+            animation: blink 0.9s infinite;
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1
+            }
+
+            50% {
+                opacity: 0.2
+            }
+        }
+
+        /* Mapa picker */
+        .map-wrap {
+            border-radius: 14px;
+            overflow: hidden;
+            height: 0;
+            transition: height 0.35s ease;
+            margin-bottom: 0;
+        }
+
+        .map-wrap.open {
+            height: 230px;
+            margin-bottom: 10px;
+        }
+
+        #map-picker {
+            width: 100%;
+            height: 230px;
+        }
+
+        .map-hint {
+            font-size: 0.72rem;
+            color: #8E8E93;
+            text-align: center;
+            padding: 4px 0 10px;
+            display: none;
+        }
+
+        .map-wrap.open+.map-hint {
+            display: block;
+        }
+
+        /* Métodos de pago */
+        .pay-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .pay-opt {
+            border: 2px solid rgba(60, 60, 67, 0.15);
+            border-radius: 16px;
+            padding: 14px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .pay-opt.active {
+            border-color: #FF4757;
+            background: rgba(255, 71, 87, 0.07);
+        }
+
+        .pay-opt:active {
+            transform: scale(0.95);
+        }
+
+        .pay-icon {
+            font-size: 1.7rem;
+            margin-bottom: 5px;
+        }
+
+        .pay-label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #1C1C1E;
+        }
+
+        .pay-opt.active .pay-label {
+            color: #FF4757;
+        }
+
+        #card-form {
+            margin-top: 14px;
+        }
+
+        .row-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* Resumen */
+        .sum-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 9px 0;
+            border-bottom: 1px solid #F2F2F7;
+        }
+
+        .sum-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .sum-lbl {
+            font-size: 0.87rem;
+            color: #8E8E93;
+            font-weight: 500;
+        }
+
+        .sum-val {
+            font-size: 0.87rem;
+            font-weight: 700;
+        }
+
+        .sum-row.total .sum-lbl {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1C1C1E;
+        }
+
+        .sum-row.total .sum-val {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #FF4757;
+        }
+
+        /* Barra pago */
+        .pay-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(242, 242, 247, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid rgba(60, 60, 67, 0.1);
+            padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
+        }
+
+        .pay-main-btn {
+            width: 100%;
+            padding: 17px;
+            border: none;
+            border-radius: 100px;
+            font-family: inherit;
+            font-size: 1.05rem;
+            font-weight: 700;
+            background: #FF4757;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 20px rgba(255, 71, 87, 0.35);
+            transition: transform 0.15s, background 0.2s, box-shadow 0.2s;
+        }
+
+        .pay-main-btn:active {
+            transform: scale(0.97);
+        }
+
+        .pay-main-btn:disabled {
+            background: #C7C7CC;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            display: none;
+            animation: spin 0.7s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Modal éxito */
+        .success-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 999;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+
+        .success-overlay.show {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .success-card {
+            background: white;
+            border-radius: 28px;
+            padding: 36px 28px 30px;
+            text-align: center;
+            width: 100%;
+            max-width: 320px;
+            transform: scale(0.85) translateY(16px);
+            transition: transform 0.4s;
+        }
+
+        .success-overlay.show .success-card {
+            transform: scale(1) translateY(0);
+        }
+
+        .success-ico {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 18px;
+            background: linear-gradient(135deg, #30D158, #34C759);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.4rem;
+            box-shadow: 0 8px 24px rgba(52, 199, 89, 0.4);
+            animation: pop 0.5s 0.1s both;
+        }
+
+        @keyframes pop {
+            from {
+                transform: scale(0)
+            }
+
+            to {
+                transform: scale(1)
+            }
+        }
+
+        .success-title {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-bottom: 5px;
+        }
+
+        .success-id {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #FF4757;
+            margin-bottom: 8px;
+        }
+
+        .success-sub {
+            font-size: 0.84rem;
+            color: #8E8E93;
+            line-height: 1.5;
+            margin-bottom: 22px;
+        }
+
+        .btn-track {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border-radius: 100px;
+            background: #1C1C1E;
+            color: white;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 10px;
+            transition: background 0.2s;
+        }
+
+        .btn-home {
+            display: block;
+            width: 100%;
+            padding: 13px;
+            border-radius: 100px;
+            background: #F2F2F7;
+            color: #3C3C43;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Confetti */
+        .cp {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            border-radius: 2px;
+            animation: cf var(--d) ease-in var(--dl) both;
+        }
+
+        @keyframes cf {
+            0% {
+                transform: translateY(-10px) rotate(0);
+                opacity: 1
+            }
+
+            100% {
+                transform: translateY(100vh) rotate(720deg);
+                opacity: 0
+            }
+        }
+
+        /* Toast */
+        .toast-wrap {
+            position: fixed;
+            top: 56px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9998;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            width: calc(100% - 32px);
+            max-width: 380px;
+            pointer-events: none;
+        }
+
+        .toast {
+            background: rgba(28, 28, 30, 0.9);
+            backdrop-filter: blur(16px);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transform: translateY(-14px) scale(0.92);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .toast.show {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+        }
+
+        .toast.ok {
+            background: rgba(48, 209, 88, 0.92);
+        }
+
+        .toast.err {
+            background: rgba(255, 59, 48, 0.92);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="toast-wrap" id="toasts"></div>
+
+    <div class="ck-header">
+        <button class="back-btn" onclick="history.back()">←</button>
+        <span class="ck-title">Resumen de Compra</span>
+    </div>
+
+    <div class="section">
+        <div class="section-label">Tu pedido</div>
+        <div id="ck-items"></div>
+    </div>
+
+    <div class="section">
+        <div class="section-label">¿Dónde entregamos?</div>
+
+        <div class="loc-grid">
+            <button class="loc-btn gps-btn" id="btn-gps" onclick="usarGPS()">
+                📍 Usar mi GPS
+            </button>
+            <button class="loc-btn map-btn" id="btn-map" onclick="toggleMapa()">
+                🗺️ Elegir en mapa
+            </button>
+        </div>
+
+        <div class="geo-box" id="geo-box">
+            <div class="geo-dot" id="geo-dot"></div>
+            <span id="geo-txt">Usa GPS para máxima precisión, o escribe tu dirección abajo</span>
+        </div>
+
+        <div class="map-wrap" id="map-wrap">
+            <div id="map-picker"></div>
+        </div>
+        <p class="map-hint" id="map-hint">🖱️ Toca el mapa o arrastra el pin rojo a tu ubicación exacta</p>
+
+        <div class="field-wrap">
+            <label class="field-label">Dirección de entrega</label>
+            <input class="input" type="text" id="address" placeholder="Ej. Av. Universitaria 1801, San Miguel"
+                oninput="onAddressInput()">
+            <div class="field-err" id="err-address"></div>
+        </div>
+        <div class="field-wrap">
+            <label class="field-label">Referencia (opcional)</label>
+            <input class="input" type="text" id="reference" placeholder="Ej. Frente al parque, piso 3...">
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-label">Método de pago</div>
+        <div class="pay-grid">
+            <div class="pay-opt active" id="opt-tarjeta" onclick="selectPay('tarjeta')">
+                <div class="pay-icon">💳</div>
+                <div class="pay-label">Tarjeta</div>
+            </div>
+            <div class="pay-opt" id="opt-yape" onclick="selectPay('yape')">
+                <div class="pay-icon">📱</div>
+                <div class="pay-label">Yape</div>
+            </div>
+        </div>
+        <div id="card-form">
+            <div class="field-wrap" style="margin-top:14px">
+                <label class="field-label">Número de tarjeta</label>
+                <input class="input" type="tel" id="card-num" placeholder="0000 0000 0000 0000" maxlength="19">
+                <div class="field-err" id="err-card"></div>
+            </div>
+            <div class="row-2">
+                <div class="field-wrap">
+                    <label class="field-label">Vencimiento</label>
+                    <input class="input" type="text" id="card-exp" placeholder="MM/AA" maxlength="5">
+                </div>
+                <div class="field-wrap">
+                    <label class="field-label">CVV</label>
+                    <input class="input" type="password" id="card-cvv" placeholder="•••" maxlength="4">
+                </div>
+            </div>
+        </div>
+        <div id="yape-info"
+            style="display:none;text-align:center;padding:16px;color:#8E8E93;font-size:0.85rem;font-weight:500">
+            📲 El código QR se generará al confirmar tu pedido
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-label">Resumen</div>
+        <div class="sum-row"><span class="sum-lbl">Subtotal</span><span class="sum-val" id="subtotal">S/. 0.00</span>
+        </div>
+        <div class="sum-row"><span class="sum-lbl">Delivery</span><span class="sum-val">S/. 4.50</span></div>
+        <div class="sum-row total"><span class="sum-lbl">Total</span><span class="sum-val" id="total">S/. 0.00</span>
+        </div>
+    </div>
+
+    <div class="pay-bar">
+        <button class="pay-main-btn" id="pay-btn" onclick="procesarPago()">
+            <div class="spinner" id="spinner"></div>
+            <span id="pay-txt">Confirmar y Pagar</span>
+        </button>
+    </div>
+
+    <div class="success-overlay" id="success-overlay">
+        <div class="success-card">
+            <div class="success-ico">✓</div>
+            <div class="success-title">¡Pago Aprobado!</div>
+            <div class="success-id" id="success-id">Orden #—</div>
+            <p class="success-sub" id="success-sub">Tu pedido está en camino.</p>
+            <a class="btn-track" id="btn-tracking" href="#">🛵 Seguir mi pedido en vivo</a>
+            <a class="btn-home" href="/" onclick="localStorage.removeItem('carrito')">Volver al inicio</a>
+        </div>
+    </div>
+
+    <script>
+        const ENVIO = 4.50;
+        let carrito = JSON.parse(localStorage.getItem('carrito')) || [];
+        let totalPago = 0;
+        let payMethod = 'tarjeta';
+        let clienteLat = null;
+        let clienteLng = null;
+        let mapPicker = null;
+        let pinPicker = null;
+        let mapaOpen = false;
+        let geoTimer = null;
+
+        window.onload = () => {
+            if (!carrito.length) { window.location.href = '/'; return; }
+            renderItems();
+            calcTotals();
+            initCardFormat();
+        };
+
+        /* ── Items ── */
+        function renderItems() {
+            document.getElementById('ck-items').innerHTML = carrito.map((it, i) => `
+      <div class="ck-item">
+        <img src="${it.imagen}" alt="${it.nombre}" onerror="this.style.display='none'">
+        <div style="flex:1;min-width:0">
+          <div class="ck-item-name">${it.nombre}</div>
+          <div class="ck-item-price">S/. ${it.precio.toFixed(2)}</div>
+        </div>
+        <button class="ck-remove" onclick="quitarItem(${i})">✕</button>
+      </div>`).join('');
+        }
+
+        function quitarItem(i) {
+            carrito.splice(i, 1);
+            if (!carrito.length) { window.location.href = '/'; return; }
+            localStorage.setItem('carrito', JSON.stringify(carrito));
+            renderItems(); calcTotals();
+        }
+
+        function calcTotals() {
+            const sub = carrito.reduce((s, it) => s + it.precio, 0);
+            totalPago = sub + ENVIO;
+            document.getElementById('subtotal').innerText = `S/. ${sub.toFixed(2)}`;
+            document.getElementById('total').innerText = `S/. ${totalPago.toFixed(2)}`;
+            document.getElementById('pay-txt').innerText = `Pagar S/. ${totalPago.toFixed(2)}`;
+        }
+
+        /* ── Geo status ── */
+        function geo(tipo, msg) {
+            const box = document.getElementById('geo-box');
+            const dot = document.getElementById('geo-dot');
+            const txt = document.getElementById('geo-txt');
+            box.className = 'geo-box' + (tipo ? ' ' + tipo : '');
+            dot.className = 'geo-dot';
+            txt.innerText = msg;
+        }
+
+        /* ── GPS ── */
+        function usarGPS() {
+            if (!navigator.geolocation) {
+                geo('err', '⚠️ Tu navegador no soporta geolocalización');
+                return;
+            }
+            const btn = document.getElementById('btn-gps');
+            btn.disabled = true;
+            btn.textContent = '⏳ Obteniendo...';
+            geo('run', '📡 Solicitando permiso de ubicación GPS...');
+
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    clienteLat = pos.coords.latitude;
+                    clienteLng = pos.coords.longitude;
+                    geo('run', '🔍 Convirtiendo a dirección...');
+                    try {
+                        const r = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?lat=${clienteLat}&lon=${clienteLng}&format=json`,
+                            { headers: { 'Accept-Language': 'es', 'User-Agent': 'SaborGoApp/1.0' } }
+                        );
+                        const d = await r.json();
+                        document.getElementById('address').value = d.display_name || `${clienteLat}, ${clienteLng}`;
+                        geo('ok', `✅ GPS obtenido · precisión ~${Math.round(pos.coords.accuracy)}m`);
+                        if (mapaOpen && pinPicker) {
+                            mapPicker.setView([clienteLat, clienteLng], 17);
+                            pinPicker.setLatLng([clienteLat, clienteLng]);
+                        }
+                    } catch {
+                        document.getElementById('address').value = `${clienteLat.toFixed(6)}, ${clienteLng.toFixed(6)}`;
+                        geo('ok', `✅ Coordenadas GPS guardadas`);
+                    }
+                    btn.disabled = false;
+                    btn.textContent = '📍 Usar mi GPS';
+                },
+                (err) => {
+                    btn.disabled = false;
+                    btn.textContent = '📍 Usar mi GPS';
+                    const m = { 1: '🚫 Permiso denegado. Activa ubicación en el navegador.', 2: '📡 No se pudo obtener ubicación.', 3: '⏱️ Tiempo agotado. Intenta de nuevo.' };
+                    geo('err', m[err.code] || '⚠️ Error GPS');
+                    if (!mapaOpen) toggleMapa();
+                },
+                { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+            );
+        }
+
+        /* ── Mapa picker (FIXED PARA SAFARI) ── */
+        function toggleMapa() {
+            const wrap = document.getElementById('map-wrap');
+            const btn = document.getElementById('btn-map');
+            mapaOpen = !mapaOpen;
+
+            if (mapaOpen) {
+                wrap.classList.add('open');
+                btn.className = 'loc-btn map-open';
+                btn.textContent = '✕ Cerrar mapa';
+
+                if (!mapPicker) {
+                    // 400ms asegura que la transición CSS de 350ms haya finalizado por completo
+                    setTimeout(() => {
+                        const lat0 = clienteLat || -12.017901488133642;
+                        const lng0 = clienteLng || -77.05080726290063;
+
+                        mapPicker = L.map('map-picker', { zoomControl: true, attributionControl: false });
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(mapPicker);
+
+                        // Se añade display:block para evitar colapsos de estructura en WebKit (Safari)
+                        const iconPin = L.divIcon({
+                            html: `<div style="display:block;width:28px;height:28px;background:#FF4757;border:3px solid white;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 8px rgba(0,0,0,0.35)"></div>`,
+                            iconSize: [28, 28], iconAnchor: [14, 28], className: ''
+                        });
+
+                        pinPicker = L.marker([lat0, lng0], { icon: iconPin, draggable: true }).addTo(mapPicker);
+                        mapPicker.setView([lat0, lng0], 15);
+
+                        pinPicker.on('dragend', e => reverseGeocode(e.target.getLatLng().lat, e.target.getLatLng().lng));
+                        mapPicker.on('click', e => { pinPicker.setLatLng(e.latlng); reverseGeocode(e.latlng.lat, e.latlng.lng); });
+
+                        // Forzar a Leaflet a recalcular dimensiones con el contenedor ya desplegado al 100%
+                        mapPicker.invalidateSize();
+
+                        geo('', 'Toca el mapa o arrastra el pin a tu ubicación');
+                    }, 400);
+                } else {
+                    // Si el mapa ya existía, también esperamos a que termine la animación para recalcular
+                    setTimeout(() => {
+                        mapPicker.invalidateSize();
+                        if (clienteLat && clienteLng) {
+                            mapPicker.setView([clienteLat, clienteLng], 16);
+                            pinPicker.setLatLng([clienteLat, clienteLng]);
+                        }
+                    }, 400);
+                }
+            } else {
+                wrap.classList.remove('open');
+                btn.className = 'loc-btn map-btn';
+                btn.textContent = '🗺️ Elegir en mapa';
+            }
+        }
+
+        async function reverseGeocode(lat, lng) {
+            clienteLat = lat; clienteLng = lng;
+            geo('run', '🔍 Buscando dirección...');
+            try {
+                const r = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`,
+                    { headers: { 'Accept-Language': 'es', 'User-Agent': 'SaborGoApp/1.0' } }
+                );
+                const d = await r.json();
+                document.getElementById('address').value = d.display_name || `${lat}, ${lng}`;
+                geo('ok', '✅ Ubicación seleccionada del mapa');
+            } catch {
+                document.getElementById('address').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+                geo('ok', '✅ Coordenadas guardadas');
+            }
+        }
+
+        /* ── Geocoding al escribir ── */
+        function onAddressInput() {
+            clearTimeout(geoTimer);
+            const addr = document.getElementById('address').value.trim();
+            clienteLat = null; clienteLng = null;
+            if (addr.length < 6) return;
+
+            geoTimer = setTimeout(async () => {
+                geo('run', '🔍 Buscando coordenadas...');
+                try {
+                    const q = encodeURIComponent(addr + ', Lima, Perú');
+                    const r = await fetch(
+                        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+                        { headers: { 'Accept-Language': 'es', 'User-Agent': 'SaborGoApp/1.0' } }
+                    );
+                    const d = await r.json();
+                    if (d.length > 0) {
+                        clienteLat = parseFloat(d[0].lat);
+                        clienteLng = parseFloat(d[0].lon);
+                        geo('ok', `✅ Dirección encontrada y georeferenciada`);
+                        if (mapaOpen && mapPicker && pinPicker) {
+                            mapPicker.setView([clienteLat, clienteLng], 16);
+                            pinPicker.setLatLng([clienteLat, clienteLng]);
+                        }
+                    } else {
+                        geo('err', '⚠️ No encontramos esa dirección. Sé más específico o usa el mapa.');
+                    }
+                } catch {
+                    geo('', 'Usa GPS o el mapa para mayor precisión');
+                }
+            }, 1500);
+        }
+
+        /* ── Pago ── */
+        function selectPay(m) {
+            payMethod = m;
+            document.getElementById('opt-tarjeta').classList.toggle('active', m === 'tarjeta');
+            document.getElementById('opt-yape').classList.toggle('active', m === 'yape');
+            document.getElementById('card-form').style.display = m === 'tarjeta' ? 'block' : 'none';
+            document.getElementById('yape-info').style.display = m === 'yape' ? 'block' : 'none';
+        }
+
+        function initCardFormat() {
+            document.getElementById('card-num').addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, '').substring(0, 16);
+                e.target.value = v.replace(/(.{4})/g, '$1 ').trim();
+            });
+            document.getElementById('card-exp').addEventListener('input', e => {
+                let v = e.target.value.replace(/\D/g, '').substring(0, 4);
+                if (v.length >= 3) v = v.substring(0, 2) + '/' + v.substring(2);
+                e.target.value = v;
+            });
+        }
+
+        /* ── Validación ── */
+        function clearErrs() {
+            document.querySelectorAll('.field-err').forEach(e => e.classList.remove('show'));
+            document.querySelectorAll('.input.error').forEach(e => e.classList.remove('error'));
+        }
+        function showE(id, msg) {
+            const el = document.getElementById(id);
+            el.innerText = msg; el.classList.add('show');
+        }
+        function validar() {
+            clearErrs(); let ok = true;
+            const addr = document.getElementById('address').value.trim();
+            if (!addr) { showE('err-address', '⚠️ La dirección es obligatoria'); document.getElementById('address').classList.add('error'); ok = false; }
+            if (payMethod === 'tarjeta' && ok) {
+                const num = document.getElementById('card-num').value.replace(/\s/g, '');
+                const exp = document.getElementById('card-exp').value;
+                const cvv = document.getElementById('card-cvv').value;
+                if (num.length < 16) { showE('err-card', '⚠️ Número inválido'); document.getElementById('card-num').classList.add('error'); ok = false; }
+                else if (exp.length < 5) { showE('err-card', '⚠️ Fecha inválida'); document.getElementById('card-exp').classList.add('error'); ok = false; }
+                else if (cvv.length < 3) { showE('err-card', '⚠️ CVV inválido'); document.getElementById('card-cvv').classList.add('error'); ok = false; }
+            }
+            return ok;
+        }
+
+        /* ── Procesar pago ── */
+        async function procesarPago() {
+            if (!validar()) return;
+
+            // SIEMPRE geocodificar antes de pagar si no hay coordenadas
+            if (!clienteLat || !clienteLng) {
+                const addr = document.getElementById('address').value.trim();
+                geo('run', '🔍 Geocodificando dirección...');
+                try {
+                    const q = encodeURIComponent(addr + ', Lima, Perú');
+                    const r = await fetch(
+                        `https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1`,
+                        { headers: { 'Accept-Language': 'es', 'User-Agent': 'SaborGoApp/1.0' } }
+                    );
+                    const d = await r.json();
+                    if (d.length > 0) {
+                        clienteLat = parseFloat(d[0].lat);
+                        clienteLng = parseFloat(d[0].lon);
+                        geo('ok', `✅ Coordenadas: ${clienteLat.toFixed(4)}, ${clienteLng.toFixed(4)}`);
+                    } else {
+                        geo('err', '⚠️ No pudimos ubicar esa dirección. El repartidor usará la dirección de texto.');
+                    }
+                } catch {
+                    geo('err', '⚠️ Error de geocoding. Continuando sin coordenadas precisas.');
+                }
+            }
+
+            const btn = document.getElementById('pay-btn');
+            btn.disabled = true;
+            document.getElementById('pay-txt').innerText = 'Procesando...';
+            document.getElementById('spinner').style.display = 'block';
+
+            const payload = {
+                cliente: localStorage.getItem('user') || 'Invitado',
+                direccion: document.getElementById('address').value.trim(),
+                metodo_pago: payMethod === 'tarjeta' ? 'Tarjeta' : 'Yape',
+                total: totalPago,
+                lat_cliente: clienteLat,
+                lng_cliente: clienteLng,
+            };
+
+            try {
+                const res = await fetch('/pedidos/crear', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    localStorage.removeItem('carrito');
+                    document.getElementById('success-id').innerText = `Orden #${data.orden_id}`;
+                    document.getElementById('success-sub').innerText =
+                        `El repartidor sale desde la UNI Puerta 5 hacia ${payload.direccion}.`;
+                    document.getElementById('btn-tracking').href = `/tracking.html?orden=${data.orden_id}`;
+                    document.getElementById('success-overlay').classList.add('show');
+                    confetti();
+                } else {
+                    toast('Error al procesar el pedido', 'err');
+                    resetBtn();
+                }
+            } catch {
+                toast('No se pudo conectar con el servidor', 'err');
+                resetBtn();
+            }
+        }
+
+        function resetBtn() {
+            const btn = document.getElementById('pay-btn');
+            btn.disabled = false;
+            document.getElementById('pay-txt').innerText = `Pagar S/. ${totalPago.toFixed(2)}`;
+            document.getElementById('spinner').style.display = 'none';
+        }
+
+        function confetti() {
+            const colors = ['#FF4757', '#FF6B35', '#FFD32A', '#2ED573', '#1E90FF', '#A29BFE'];
+            for (let i = 0; i < 60; i++) {
+                const el = document.createElement('div');
+                el.className = 'cp';
+                el.style.cssText = `left:${Math.random() * 100}vw;background:${colors[~~(Math.random() * colors.length)]};--d:${1.5 + Math.random() * 2}s;--dl:${Math.random() * 0.8}s;border-radius:${Math.random() > .5 ? '50%' : '2px'};width:${6 + ~~(Math.random() * 8)}px;height:${6 + ~~(Math.random() * 8)}px`;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 4000);
+            }
+        }
+
+        function toast(msg, tipo = '') {
+            const el = document.createElement('div');
+            el.className = `toast ${tipo}`;
+            el.innerHTML = `<span>${tipo === 'ok' ? '✅' : tipo === 'err' ? '❌' : 'ℹ️'}</span><span>${msg}</span>`;
+            document.getElementById('toasts').appendChild(el);
+            requestAnimationFrame(() => requestAnimationFrame(() => el.classList.add('show')));
+            setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, 2800);
+        }
+    </script>
+</body>
+
+</html>
